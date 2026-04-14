@@ -1,6 +1,5 @@
 {
   "name": "popstart-grant-finder-proxy",
   "version": "1.0.0",
-  "description": "Proxy for Popstart Grant Finder — forwards requests to Anthropic API",
   "private": true
 }
