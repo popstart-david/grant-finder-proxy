@@ -1,0 +1,109 @@
+# Popstart Grant Finder — Vercel Deploy Guide
+
+## What's in this folder
+
+```
+grant-finder/
+├── api/
+│   └── claude.js        ← Proxy function (calls Anthropic, keeps key secret)
+├── public/
+│   └── index.html       ← The Grant Finder UI (paste this into SurveyJS)
+├── vercel.json          ← Vercel config
+├── package.json         ← Project metadata
+└── DEPLOY.md            ← This file
+```
+
+---
+
+## Step 1 — Push to GitHub
+
+1. Go to github.com and create a new repository (e.g. `grant-finder-proxy`)
+2. Upload all files in this folder to the repository
+   - Easiest way: drag and drop the files into the GitHub web interface
+   - Make sure the folder structure is preserved (api/claude.js, public/index.html, etc.)
+
+---
+
+## Step 2 — Deploy to Vercel
+
+1. Go to vercel.com and sign in (or create a free account)
+2. Click **Add New Project**
+3. Select **Import Git Repository** and choose your `grant-finder-proxy` repo
+4. Click **Deploy** — Vercel will auto-detect the config from vercel.json
+
+---
+
+## Step 3 — Add your Anthropic API key
+
+1. In your Vercel project dashboard, go to **Settings → Environment Variables**
+2. Add a new variable:
+   - **Name:** `ANTHROPIC_API_KEY`
+   - **Value:** your Anthropic API key (sk-ant-...)
+   - **Environment:** Production, Preview, Development (tick all three)
+3. Click **Save**
+4. Go to **Deployments** and click **Redeploy** on your latest deployment
+   (environment variables only take effect after a redeploy)
+
+---
+
+## Step 4 — Get your proxy URL
+
+After deploying, your proxy URL will be:
+
+```
+https://YOUR-PROJECT-NAME.vercel.app/api/claude
+```
+
+You can find your project name in the Vercel dashboard URL or on the project overview page.
+
+---
+
+## Step 5 — Update the HTML
+
+Open `public/index.html` and find this line near the top of the script:
+
+```javascript
+const PROXY_URL = 'https://YOUR-PROJECT.vercel.app/api/claude';
+```
+
+Replace `YOUR-PROJECT` with your actual Vercel project name. Save the file.
+
+---
+
+## Step 6 — Paste into SurveyJS
+
+Copy the entire contents of `public/index.html` and paste it into the
+SurveyJS HTML question markdown box.
+
+The agent will start automatically — no API key prompt, no gate screen.
+
+---
+
+## Testing the proxy directly
+
+You can test that the proxy is working by opening your browser console and running:
+
+```javascript
+fetch('https://YOUR-PROJECT.vercel.app/api/claude', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 50,
+    messages: [{ role: 'user', content: 'Say hello' }]
+  })
+}).then(r => r.json()).then(console.log)
+```
+
+If you see a response with `content`, the proxy is working correctly.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Proxy returns 500 "API key not configured" | Re-check env variable name is exactly `ANTHROPIC_API_KEY` and redeploy |
+| Proxy returns CORS error | Check vercel.json is in the root of your repo |
+| Agent doesn't start in SurveyJS | Make sure PROXY_URL in the HTML matches your actual Vercel URL |
+| Vercel says "No framework detected" | That's fine — click Deploy anyway, it will work |

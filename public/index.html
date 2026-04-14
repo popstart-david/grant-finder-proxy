@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Popstart — Grant Finder</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: #f0ede8;
+  }
+
+  #gf-root {
+    width: 100%;
+    height: 800px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e4e0db;
+  }
+
+  /* Top bar */
+  #topbar {
+    height: 52px;
+    min-height: 52px;
+    background: #fff;
+    border-bottom: 1px solid #e4e0db;
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  #topbar-logo {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: #EEEDFE; display: flex; align-items: center;
+    justify-content: center; font-size: 15px; color: #534AB7; font-weight: 700;
+  }
+  #topbar-title { font-size: 15px; font-weight: 600; color: #1a1a18; }
+  #topbar-sub { font-size: 13px; color: #aaa; }
+  #reset-btn {
+    margin-left: auto; font-size: 13px; color: #666;
+    background: none; border: 1px solid #ddd; padding: 5px 14px;
+    border-radius: 8px; cursor: pointer; font-family: inherit;
+  }
+  #reset-btn:hover { border-color: #999; color: #333; }
+
+  /* Two-column workspace */
+  #workspace {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Left — chat */
+  #chat-col {
+    width: 460px;
+    min-width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-right: 1px solid #e4e0db;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+
+  .bubble {
+    max-width: 82%; padding: 11px 15px; border-radius: 16px;
+    font-size: 14px; line-height: 1.7;
+  }
+  .msg.agent .bubble { background: #f5f4f0; color: #1a1a18; border-top-left-radius: 4px; }
+  .msg.user .bubble { background: #EEEDFE; color: #26215C; border-top-right-radius: 4px; }
+
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; margin-top: 2px;
+  }
+  .agent-av { background: #CECBF6; color: #3C3489; }
+  .user-av { background: #e4e0db; color: #666; }
+
+  .options-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .opt-btn {
+    font-size: 13px; padding: 6px 13px; border-radius: 20px;
+    border: 1px solid #d0ccc8; background: #fff; color: #1a1a18;
+    cursor: pointer; font-family: inherit; transition: all 0.12s;
+  }
+  .opt-btn:hover:not(:disabled) { border-color: #7F77DD; background: #EEEDFE; color: #3C3489; }
+  .opt-btn.selected { background: #EEEDFE; color: #3C3489; border-color: #AFA9EC; }
+  .opt-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .confirm-btn { background: #534AB7; color: white; border-color: #534AB7; }
+  .confirm-btn:hover:not(:disabled) { background: #3C3489; border-color: #3C3489; color: white; }
+
+  .typing-wrap { display: flex; gap: 10px; align-items: flex-start; }
+  .typing-bubble {
+    background: #f5f4f0; padding: 13px 16px; border-radius: 16px;
+    border-top-left-radius: 4px; display: flex; gap: 5px; align-items: center;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #bbb; animation: blink 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+  #input-area {
+    padding: 14px 16px; border-top: 1px solid #e4e0db;
+    display: flex; gap: 10px; background: #fafaf8; flex-shrink: 0;
+  }
+  #user-input {
+    flex: 1; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid #ccc; background: #fff; color: #1a1a18;
+    font-size: 14px; font-family: inherit; resize: none;
+    min-height: 40px; max-height: 110px; line-height: 1.5;
+  }
+  #user-input:focus { outline: none; border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,0.12); }
+  #user-input:disabled { opacity: 0.5; }
+  #send-btn {
+    padding: 9px 20px; background: #534AB7; color: white; border: none;
+    border-radius: 10px; font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: inherit; align-self: flex-end;
+  }
+  #send-btn:hover:not(:disabled) { background: #3C3489; }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .error-msg {
+    background: #FCEBEB; color: #A32D2D; border-radius: 10px;
+    padding: 11px 14px; font-size: 13px;
+  }
+
+  /* Right — cards */
+  #cards-col {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f0ede8;
+  }
+
+  #cards-heading {
+    font-size: 11px; font-weight: 600; color: #aaa;
+    text-transform: uppercase; letter-spacing: 0.07em; padding-bottom: 2px;
+  }
+
+  .card {
+    background: #fff; border-radius: 12px;
+    border: 1px solid #e4e0db; overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 18px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none; border-bottom: 1px solid transparent;
+    transition: background 0.12s;
+  }
+  .card-header:hover { background: #fafaf8; }
+  .card-header.has-content { border-bottom-color: #e4e0db; }
+
+  .card-badge {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .badge-pending { background: #ede9e4; color: #aaa; }
+  .badge-active { background: #EEEDFE; color: #534AB7; }
+  .badge-done { background: #E1F5EE; color: #085041; }
+
+  .card-title { font-size: 14px; font-weight: 500; color: #1a1a18; }
+  .card-subtitle { font-size: 12px; color: #bbb; margin-left: auto; }
+  .card-chevron { margin-left: 6px; font-size: 10px; color: #ccc; transition: transform 0.2s; }
+  .card-chevron.open { transform: rotate(180deg); }
+
+  .card-body { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.2s; }
+  .card-body.open { max-height: 3000px; padding: 16px 18px; }
+  .placeholder-text { font-size: 13px; color: #ccc; font-style: italic; }
+
+  .profile-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .profile-item { background: #fafaf8; border-radius: 8px; padding: 9px 11px; }
+  .profile-label { font-size: 10px; color: #aaa; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .profile-value { font-size: 13px; color: #1a1a18; font-weight: 500; }
+  .profile-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+  .tag { font-size: 11px; padding: 3px 9px; border-radius: 10px; background: #EEEDFE; color: #3C3489; }
+
+  .grant-item { border: 1px solid #ede9e4; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+  .grant-item:last-child { margin-bottom: 0; }
+  .grant-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+  .grant-name { font-size: 14px; font-weight: 600; color: #1a1a18; line-height: 1.4; }
+  .grant-org { font-size: 12px; color: #999; margin-bottom: 7px; }
+  .match-badge { font-size: 11px; padding: 3px 9px; border-radius: 10px; flex-shrink: 0; font-weight: 600; }
+  .match-high { background: #E1F5EE; color: #085041; }
+  .match-medium { background: #FAEEDA; color: #633806; }
+  .match-low { background: #ede9e4; color: #666; }
+  .grant-detail { font-size: 13px; color: #444; line-height: 1.65; }
+  .grant-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .meta-chip { font-size: 12px; padding: 3px 9px; border-radius: 8px; background: #f5f4f0; color: #555; }
+
+  .opp-item { border-left: 3px solid #CECBF6; padding: 10px 13px; margin-bottom: 10px; border-radius: 0 8px 8px 0; background: #fafaf8; }
+  .opp-item:last-child { margin-bottom: 0; }
+  .opp-name { font-size: 13px; font-weight: 600; color: #1a1a18; margin-bottom: 3px; }
+  .opp-org { font-size: 12px; color: #aaa; margin-bottom: 5px; }
+  .opp-detail { font-size: 13px; color: #555; line-height: 1.6; }
+
+  .step-item { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid #f0ede8; }
+  .step-item:last-child { border-bottom: none; }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%; background: #EEEDFE; color: #534AB7;
+    font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .step-text { font-size: 13px; color: #1a1a18; line-height: 1.65; }
+  .step-text strong { display: block; font-size: 13px; font-weight: 600; color: #1a1a18; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<div id="gf-root">
+
+  <div id="topbar">
+    <div id="topbar-logo">$</div>
+    <span id="topbar-title">Grant Finder</span>
+    <span id="topbar-sub">· Popstart</span>
+    <button id="reset-btn">New session</button>
+  </div>
+
+  <div id="workspace">
+
+    <div id="chat-col">
+      <div id="messages"></div>
+      <div id="input-area">
+        <textarea id="user-input" placeholder="Type a message…" rows="1"></textarea>
+        <button id="send-btn">Send</button>
+      </div>
+    </div>
+
+    <div id="cards-col">
+      <div id="cards-heading">Your report</div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard('profile-body','profile')">
+          <div class="card-badge badge-pending" id="badge-profile">1</div>
+          <span class="card-title">Your grant profile</span>
+          <span class="card-subtitle" id="subtitle-profile">Pending</span>
+          <span class="card-chevron" id="chevron-profile">▼</span>
+        </div>
+        <div class="card-body" id="profile-body">
+          <p class="placeholder-text">Your grant profile will appear here once we've covered the basics.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard('shortlist-body','shortlist')">
+          <div class="card-badge badge-pending" id="badge-shortlist">2</div>
+          <span class="card-title">Your grant shortlist</span>
+          <span class="card-subtitle" id="subtitle-shortlist">Pending</span>
+          <span class="card-chevron" id="chevron-shortlist">▼</span>
+        </div>
+        <div class="card-body" id="shortlist-body">
+          <p class="placeholder-text">Your prioritised grant shortlist will be built here after the search.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard('additional-body','additional')">
+          <div class="card-badge badge-pending" id="badge-additional">3</div>
+          <span class="card-title">Additional opportunities</span>
+          <span class="card-subtitle" id="subtitle-additional">Pending</span>
+          <span class="card-chevron" id="chevron-additional">▼</span>
+        </div>
+        <div class="card-body" id="additional-body">
+          <p class="placeholder-text">Secondary matches worth monitoring will appear here.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard('nextsteps-body','nextsteps')">
+          <div class="card-badge badge-pending" id="badge-nextsteps">4</div>
+          <span class="card-title">What to do next</span>
+          <span class="card-subtitle" id="subtitle-nextsteps">Pending</span>
+          <span class="card-chevron" id="chevron-nextsteps">▼</span>
+        </div>
+        <div class="card-body" id="nextsteps-body">
+          <p class="placeholder-text">Your prioritised action checklist will be waiting here when we're done.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------
+// IMPORTANT: Replace this with your deployed Vercel URL
+// e.g. https://your-project.vercel.app/api/claude
+// ---------------------------------------------------------------
+const PROXY_URL = 'https://YOUR-PROJECT.vercel.app/api/claude';
+
+const SYSTEM_PROMPT = `You are the Popstart Grant Finder — a specialist funding coach helping US-based small business owners identify grants they qualify for and understand what to do next.
+
+Your goal is to produce a personalised, prioritised grant opportunity report with three parts:
+1. A prioritised shortlist of grants to research first
+2. Additional opportunities worth monitoring
+3. A clear next steps checklist
+
+SESSION OPENING:
+Introduce yourself briefly (2 sentences). Ask whether they want the quick version (~15 min) or a deeper look (~40 min).
+
+QUESTION RULES:
+- Ask ONE question at a time. Never bundle multiple questions.
+- When a question has fixed options, list them clearly.
+- Keep responses short and conversational.
+- Acknowledge what the user said before moving forward.
+
+SECTION A — Business Profile:
+1. What kind of business do you run?
+2. Is your business for-profit, nonprofit, or a social enterprise? [For-profit / Nonprofit / Social enterprise / Not sure]
+3. What stage is your business at? [Pre-revenue / Early-stage / Growth / Established]
+4. How many people work in your business including yourself?
+5. What is your approximate annual revenue? [Pre-revenue / Under $100K / $100K–$250K / $250K–$500K / $500K–$1M / Over $1M]
+6. Which US state is your business based in?
+
+SECTION B — Ownership & Eligibility:
+7. Does your business qualify under any ownership categories? (multi-select OK) [Woman-owned / Minority-owned / Veteran-owned / LGBTQ+-owned / Disability-owned / None of the above]
+8. If any ownership selected: Have you formally certified that status (e.g. WBENC, SBA 8(a))? [Yes / No / Not sure what that means] — skip if none selected.
+9. Do you know your NAICS code? [Yes, I know it / No — help me find it]
+10. Have you received any grants before? [Yes / No]
+
+SECTION C — Grant Preferences:
+11. What kind of funding would be most useful? (multi-select OK) [Startup capital / R&D and innovation / Workforce and hiring / Export and trade / Community and social impact / General operating / Not sure — show me everything]
+
+AFTER ALL INPUTS COLLECTED:
+Confirm the profile back briefly, then say you're generating the report.
+
+CRITICAL — STRUCTURED OUTPUT:
+Once you have all inputs and are ready to deliver the report, you MUST end your message with a JSON block in exactly this format (after your conversational text):
+
+<GRANT_DATA>
+{
+  "profile": {
+    "business_type": "",
+    "for_profit_status": "",
+    "stage": "",
+    "employees": "",
+    "revenue": "",
+    "state": "",
+    "ownership": [],
+    "grant_types": []
+  },
+  "shortlist": [
+    {
+      "name": "",
+      "body": "",
+      "award": "",
+      "match_strength": "High|Medium|Low",
+      "why_match": "",
+      "requirements": ""
+    }
+  ],
+  "additional": [
+    {
+      "name": "",
+      "body": "",
+      "why_watch": ""
+    }
+  ],
+  "next_steps": [
+    {
+      "action": "",
+      "detail": ""
+    }
+  ]
+}
+</GRANT_DATA>
+
+Include 3-5 shortlist grants, 2-3 additional opportunities, and 4-6 next steps. Be realistic and specific. Use real grant programmes where possible.
+
+GAP DETECTION (raise one at a time when relevant):
+- Ownership selected but not certified: mention WBENC / SBA 8(a)
+- User seems federal-focused: mention state programmes are less competitive
+- Strong matches found: flag SAM.gov registration
+- User wants just one grant: mention grants can be stacked
+
+TONE: Warm, expert, focused. Frame shortlist as research starting points, never guaranteed eligibility.`;
+
+let history = [];
+let isLoading = false;
+
+document.getElementById('reset-btn').onclick = initChat;
+
+function initChat() {
+  history = [];
+  document.getElementById('messages').innerHTML = '';
+  resetCards();
+  history.push({ role: 'user', content: 'Hello' });
+  callAgent();
+}
+
+function toggleCard(bodyId, id) {
+  const body = document.getElementById(bodyId);
+  const chevron = document.getElementById('chevron-' + id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (chevron) chevron.classList.toggle('open', !isOpen);
+}
+
+function resetCards() {
+  ['profile','shortlist','additional','nextsteps'].forEach(id => {
+    document.getElementById('badge-' + id).className = 'card-badge badge-pending';
+    document.getElementById('subtitle-' + id).textContent = 'Pending';
+    const body = document.getElementById(id + '-body');
+    body.classList.remove('open');
+    const chevron = document.getElementById('chevron-' + id);
+    if (chevron) chevron.classList.remove('open');
+    const hdr = body.previousElementSibling;
+    if (hdr) hdr.classList.remove('has-content');
+  });
+  document.getElementById('profile-body').innerHTML = '<p class="placeholder-text">Your grant profile will appear here once we\'ve covered the basics.</p>';
+  document.getElementById('shortlist-body').innerHTML = '<p class="placeholder-text">Your prioritised grant shortlist will be built here after the search.</p>';
+  document.getElementById('additional-body').innerHTML = '<p class="placeholder-text">Secondary matches worth monitoring will appear here.</p>';
+  document.getElementById('nextsteps-body').innerHTML = '<p class="placeholder-text">Your prioritised action checklist will be waiting here when we\'re done.</p>';
+}
+
+function activateCard(id, subtitle) {
+  document.getElementById('badge-' + id).className = 'card-badge badge-active';
+  document.getElementById('subtitle-' + id).textContent = subtitle || 'In progress';
+}
+
+function completeCard(id, subtitle) {
+  document.getElementById('badge-' + id).className = 'card-badge badge-done';
+  document.getElementById('subtitle-' + id).textContent = subtitle || 'Done';
+  const body = document.getElementById(id + '-body');
+  body.previousElementSibling.classList.add('has-content');
+  body.classList.add('open');
+  const chevron = document.getElementById('chevron-' + id);
+  if (chevron) chevron.classList.add('open');
+  setTimeout(() => body.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderProfile(p) {
+  const ownership = (p.ownership && p.ownership.length && p.ownership[0] !== 'None of the above')
+    ? p.ownership.map(o => `<span class="tag">${esc(o)}</span>`).join('')
+    : '<span style="font-size:13px;color:#aaa">None specified</span>';
+  const grantTypes = (p.grant_types && p.grant_types.length)
+    ? p.grant_types.map(g => `<span class="tag">${esc(g)}</span>`).join('')
+    : '<span style="font-size:13px;color:#aaa">Not specified</span>';
+  document.getElementById('profile-body').innerHTML = `
+    <div class="profile-grid">
+      <div class="profile-item"><div class="profile-label">Business type</div><div class="profile-value">${esc(p.business_type||'—')}</div></div>
+      <div class="profile-item"><div class="profile-label">Status</div><div class="profile-value">${esc(p.for_profit_status||'—')}</div></div>
+      <div class="profile-item"><div class="profile-label">Stage</div><div class="profile-value">${esc(p.stage||'—')}</div></div>
+      <div class="profile-item"><div class="profile-label">Employees</div><div class="profile-value">${esc(p.employees||'—')}</div></div>
+      <div class="profile-item"><div class="profile-label">Revenue</div><div class="profile-value">${esc(p.revenue||'—')}</div></div>
+      <div class="profile-item"><div class="profile-label">State</div><div class="profile-value">${esc(p.state||'—')}</div></div>
+    </div>
+    <div class="profile-item" style="margin-top:8px;background:#fafaf8;border-radius:8px;padding:9px 11px;">
+      <div class="profile-label">Ownership</div><div class="profile-tags">${ownership}</div>
+    </div>
+    <div class="profile-item" style="margin-top:7px;background:#fafaf8;border-radius:8px;padding:9px 11px;">
+      <div class="profile-label">Grant focus</div><div class="profile-tags">${grantTypes}</div>
+    </div>`;
+}
+
+function renderShortlist(grants) {
+  document.getElementById('shortlist-body').innerHTML = grants.map(g => {
+    const mc = g.match_strength === 'High' ? 'match-high' : g.match_strength === 'Medium' ? 'match-medium' : 'match-low';
+    return `<div class="grant-item">
+      <div class="grant-top">
+        <div class="grant-name">${esc(g.name)}</div>
+        <span class="match-badge ${mc}">${esc(g.match_strength)}</span>
+      </div>
+      <div class="grant-org">${esc(g.body)}</div>
+      <div class="grant-detail">${esc(g.why_match)}</div>
+      <div class="grant-meta">
+        ${g.award ? `<span class="meta-chip">Award: ${esc(g.award)}</span>` : ''}
+        ${g.requirements ? `<span class="meta-chip">Requires: ${esc(g.requirements)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdditional(opps) {
+  document.getElementById('additional-body').innerHTML = opps.map(o => `
+    <div class="opp-item">
+      <div class="opp-name">${esc(o.name)}</div>
+      <div class="opp-org">${esc(o.body)}</div>
+      <div class="opp-detail">${esc(o.why_watch)}</div>
+    </div>`).join('');
+}
+
+function renderNextSteps(steps) {
+  document.getElementById('nextsteps-body').innerHTML = steps.map((s, i) => `
+    <div class="step-item">
+      <div class="step-num">${i + 1}</div>
+      <div class="step-text"><strong>${esc(s.action)}</strong>${esc(s.detail)}</div>
+    </div>`).join('');
+}
+
+function parseGrantData(text) {
+  const m = text.match(/<GRANT_DATA>([\s\S]*?)<\/GRANT_DATA>/);
+  if (!m) return null;
+  try { return JSON.parse(m[1].trim()); } catch(e) { return null; }
+}
+
+function stripGrantData(text) {
+  return text.replace(/<GRANT_DATA>[\s\S]*?<\/GRANT_DATA>/, '').trim();
+}
+
+function renderText(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/\n/g,'<br>');
+}
+
+function addMsg(role, text, opts) {
+  const msgs = document.getElementById('messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + (role === 'user' ? 'user' : 'agent');
+  const av = document.createElement('div');
+  av.className = 'avatar ' + (role === 'user' ? 'user-av' : 'agent-av');
+  av.textContent = role === 'user' ? 'You' : 'GF';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = renderText(text);
+  if (opts && opts.length) {
+    const isMulti = !!opts.multi;
+    const selected = new Set();
+    const row = document.createElement('div');
+    row.className = 'options-row';
+    opts.filter(o => typeof o === 'string').forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'opt-btn';
+      btn.textContent = opt;
+      btn.onclick = () => {
+        if (isMulti) {
+          btn.classList.toggle('selected');
+          if (selected.has(opt)) selected.delete(opt); else selected.add(opt);
+        } else {
+          row.querySelectorAll('button').forEach(b => b.disabled = true);
+          doSend(opt);
+        }
+      };
+      row.appendChild(btn);
+    });
+    if (isMulti) {
+      const cb = document.createElement('button');
+      cb.className = 'opt-btn confirm-btn';
+      cb.textContent = 'Confirm →';
+      cb.onclick = () => {
+        row.querySelectorAll('button').forEach(b => b.disabled = true);
+        doSend([...selected].length ? [...selected].join(', ') : 'None of the above');
+      };
+      row.appendChild(cb);
+    }
+    bubble.appendChild(row);
+  }
+  wrap.appendChild(av);
+  wrap.appendChild(bubble);
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'typing-wrap'; wrap.id = 'typing';
+  const av = document.createElement('div');
+  av.className = 'avatar agent-av'; av.textContent = 'GF';
+  const b = document.createElement('div');
+  b.className = 'typing-bubble';
+  b.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  wrap.appendChild(av); wrap.appendChild(b);
+  msgs.appendChild(wrap); msgs.scrollTop = msgs.scrollHeight;
+}
+function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+
+function detectOptions(text) {
+  const t = text.toLowerCase();
+  const arr = (items, multi) => { const a = [...items]; if (multi) a.multi = true; return a; };
+  if ((t.includes('15 min') || t.includes('quick')) && (t.includes('40 min') || t.includes('deeper'))) return ['Quick (~15 min)', 'Deeper look (~40 min)'];
+  if (t.includes('for-profit') && t.includes('nonprofit') && t.includes('social enterprise')) return ['For-profit', 'Nonprofit', 'Social enterprise', 'Not sure'];
+  if (t.includes('pre-revenue') && t.includes('early') && t.includes('growth') && t.includes('established')) return ['Pre-revenue', 'Early-stage', 'Growth', 'Established'];
+  if (t.includes('under $100k') || (t.includes('annual revenue') && t.includes('pre-revenue'))) return ['Pre-revenue', 'Under $100K', '$100K-$250K', '$250K-$500K', '$500K-$1M', 'Over $1M'];
+  if (t.includes('woman-owned') || t.includes('minority-owned')) return arr(['Woman-owned','Minority-owned','Veteran-owned','LGBTQ+-owned','Disability-owned','None of the above'], true);
+  if ((t.includes('certified') || t.includes('wbenc')) && t.includes('formally')) return ['Yes', 'No', 'Not sure what that means'];
+  if (t.includes('naics') && (t.includes('know') || t.includes('help'))) return ['Yes, I know it', 'No - help me find it'];
+  if (t.includes('received any grants') || t.includes('grants before')) return ['Yes', 'No'];
+  if (t.includes('startup capital') || t.includes('r&d') || t.includes('workforce and hiring')) return arr(['Startup capital','R&D and innovation','Workforce and hiring','Export and trade','Community and social impact','General operating','Not sure - show me everything'], true);
+  return null;
+}
+
+async function callAgent() {
+  if (isLoading) return;
+  isLoading = true;
+  setDisabled(true);
+  addTyping();
+  try {
+    const resp = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        messages: history
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'Proxy error ' + resp.status);
+    }
+    const data = await resp.json();
+    const fullReply = data.content?.map(b => b.text || '').join('') || '';
+    history.push({ role: 'assistant', content: fullReply });
+    const grantData = parseGrantData(fullReply);
+    const displayText = stripGrantData(fullReply);
+    removeTyping();
+    if (displayText) addMsg('agent', displayText, detectOptions(displayText));
+    if (grantData) {
+      if (grantData.profile && Object.values(grantData.profile).some(v => v && (Array.isArray(v) ? v.length : v))) {
+        activateCard('profile', 'Ready'); renderProfile(grantData.profile); completeCard('profile', 'Complete');
+      }
+      if (grantData.shortlist && grantData.shortlist.length) {
+        activateCard('shortlist', 'Searching...'); renderShortlist(grantData.shortlist); completeCard('shortlist', grantData.shortlist.length + ' grants found');
+      }
+      if (grantData.additional && grantData.additional.length) {
+        renderAdditional(grantData.additional); completeCard('additional', grantData.additional.length + ' to watch');
+      }
+      if (grantData.next_steps && grantData.next_steps.length) {
+        renderNextSteps(grantData.next_steps); completeCard('nextsteps', grantData.next_steps.length + ' actions');
+      }
+    }
+    const tl = (displayText || '').toLowerCase();
+    if (tl.includes('ownership') || tl.includes('naics') || tl.includes('certif')) {
+      if (document.getElementById('badge-profile').className.includes('pending')) activateCard('profile', 'In progress');
+    }
+  } catch(err) {
+    removeTyping();
+    const msgs = document.getElementById('messages');
+    const e = document.createElement('div');
+    e.className = 'error-msg';
+    e.textContent = 'Error: ' + (err.message || 'Could not reach the server.');
+    msgs.appendChild(e); msgs.scrollTop = msgs.scrollHeight;
+  }
+  isLoading = false;
+  setDisabled(false);
+  document.getElementById('user-input').focus();
+}
+
+function setDisabled(v) {
+  document.getElementById('user-input').disabled = v;
+  document.getElementById('send-btn').disabled = v;
+}
+
+function doSend(text) {
+  if (!text || !text.trim() || isLoading) return;
+  addMsg('user', text);
+  history.push({ role: 'user', content: text });
+  callAgent();
+}
+
+document.getElementById('send-btn').onclick = () => {
+  const v = document.getElementById('user-input').value.trim();
+  if (!v) return;
+  document.getElementById('user-input').value = '';
+  document.getElementById('user-input').style.height = 'auto';
+  doSend(v);
+};
+
+document.getElementById('user-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('send-btn').click(); }
+});
+
+document.getElementById('user-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+});
+
+// Start automatically on load
+initChat();
+</script>
+</body>
+</html>
