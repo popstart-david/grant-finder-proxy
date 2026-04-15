@@ -360,7 +360,9 @@ async function callAgent() {
     const data = await resp.json();
     const fullReply = data.content?.map(b => b.text || '').join('') || '';
     history.push({ role: 'assistant', content: fullReply });
-    const tl = (displayText || '').toLowerCase();
+    removeTyping();
+    if (fullReply) addMsg('agent', fullReply, detectOptions(fullReply));
+    const tl = fullReply.toLowerCase();
     if (tl.includes('ownership') || tl.includes('naics') || tl.includes('certif')) {
       if (document.getElementById('badge-profile').className.includes('pending')) activateCard('profile', 'In progress');
     }
