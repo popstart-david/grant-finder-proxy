@@ -10,16 +10,22 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     background: #f0ede8;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
   }
 
   #gf-root {
-    width: 100%;
-    height: 800px;
+    width: 750px;
+    height: 650px;
     display: flex;
     flex-direction: column;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid #e4e0db;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
   }
 
   /* Top bar */
@@ -58,7 +64,7 @@
   /* Left — chat */
   #chat-col {
     width: 100%;
-    min-width: 300px;
+    min-width: 0;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -362,10 +368,7 @@ async function callAgent() {
     history.push({ role: 'assistant', content: fullReply });
     removeTyping();
     if (fullReply) addMsg('agent', fullReply, detectOptions(fullReply));
-    const tl = fullReply.toLowerCase();
-    if (tl.includes('ownership') || tl.includes('naics') || tl.includes('certif')) {
-      if (document.getElementById('badge-profile').className.includes('pending')) activateCard('profile', 'In progress');
-    }
+
   } catch(err) {
     removeTyping();
     const msgs = document.getElementById('messages');
