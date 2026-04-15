@@ -61,16 +61,12 @@
     overflow: hidden;
   }
 
-  /* Left — chat */
   #chat-col {
-    width: 100%;
+    flex: 1;
     min-width: 0;
-    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     background: #fff;
-    
-    height: 100%;
     overflow: hidden;
   }
 
@@ -125,19 +121,20 @@
 
   #input-area {
     padding: 14px 16px; border-top: 1px solid #e4e0db;
-    display: flex; gap: 10px; background: #fafaf8; flex-shrink: 0;
+    display: flex; gap: 10px; background: #fff; flex-shrink: 0;
+    box-sizing: border-box;
   }
   #user-input {
-    flex: 1; padding: 9px 12px; border-radius: 10px;
-    border: 1px solid #ccc; background: #fff; color: #1a1a18;
+    flex: 1; padding: 10px 14px; border-radius: 16px;
+    border: 1px solid #e4e0db; background: #f5f4f0; color: #1a1a18;
     font-size: 14px; font-family: inherit; resize: none;
     min-height: 40px; max-height: 110px; line-height: 1.5;
   }
-  #user-input:focus { outline: none; border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,0.12); }
+  #user-input:focus { outline: none; border-color: #AFA9EC; box-shadow: 0 0 0 3px rgba(127,119,221,0.1); }
   #user-input:disabled { opacity: 0.5; }
   #send-btn {
     padding: 9px 20px; background: #534AB7; color: white; border: none;
-    border-radius: 10px; font-size: 14px; font-weight: 500;
+    border-radius: 16px; font-size: 14px; font-weight: 500;
     cursor: pointer; font-family: inherit; align-self: flex-end;
   }
   #send-btn:hover:not(:disabled) { background: #3C3489; }
